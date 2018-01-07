@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <PackageLicenseUrl>https://github.com/goldenass/AsIKnow.Graph/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/goldenass/AsIKnow.Graph</PackageProjectUrl>
+    <Company>asiknow.it</Company>
+    <Version>0.1.0</Version>
+    <PackageTags>graph</PackageTags>
+    <Description>Graph manipulation library</Description>
+  </PropertyGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="if &quot;$(ConfigurationName)&quot; == &quot;Release&quot; (&#xD;&#xA;cd &quot;$(ProjectDir)&quot; &#xD;&#xA;dotnet pack --no-build --output &quot;$(SolutionDir)..\build&quot;&#xD;&#xA;)" />
+  </Target>
+
+</Project>
