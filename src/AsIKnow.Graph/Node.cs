@@ -12,7 +12,7 @@ namespace AsIKnow.Graph
         {
         }
 
-        public List<Relationship> EnteringRelationships { get; set; }
-        public List<Relationship> ExitingRelationships { get; set; }
+        public HashSet<Relationship> EnteringRelationships { get; set; } = new HashSet<Relationship>();
+        public HashSet<Relationship> ExitingRelationships { get; set; } = new HashSet<Relationship>();
     }
 }

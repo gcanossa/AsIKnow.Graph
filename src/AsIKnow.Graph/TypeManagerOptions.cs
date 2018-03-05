@@ -6,6 +6,6 @@ namespace AsIKnow.Graph
 {
     public class TypeManagerOptions
     {
-        public bool UseFullNameInLables { get; set; }
+        public bool UseFullNameInLables { get; set; } = false;
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -7,7 +8,7 @@ using System.Text;
 
 namespace AsIKnow.Graph
 {
-    public abstract class LabelledEntity
+    public abstract class LabelledEntity : IEnumerable<KeyValuePair<string, object>>
     {
         protected TypeManager TypeManager { get; set; }
         public LabelledEntity(TypeManager typeManager)
@@ -22,6 +23,31 @@ namespace AsIKnow.Graph
         public IEnumerable<string> PropertiesKeys { get { return Properties.Keys; } }
         protected Dictionary<string, object> Properties { get; } = new Dictionary<string, object>();
 
+        public object this[string key]
+        {
+            get
+            {
+                return Properties[key];
+            }
+            set
+            {
+                Properties[key] = value;
+            }
+        }
+
+        public LabelledEntity AddLabels<T>()
+        {
+            AddLabels(typeof(T));
+
+            return this;
+        }
+        public LabelledEntity AddLabels(Type type)
+        {
+            TypeManager.GetLabels(type).ToList().ForEach(p => { if (!((List<string>)Labels).Contains(p)) ((List<string>)Labels).Add(p); });
+
+            return this;
+        }
+
         public LabelledEntity AddLabel<T>()
         {
             AddLabel(typeof(T));
@@ -30,8 +56,20 @@ namespace AsIKnow.Graph
         }
         public LabelledEntity AddLabel(Type type)
         {
-            TypeManager.GetLabels(type).ForEach(p => { if (!((List<string>)Labels).Contains(p)) ((List<string>)Labels).Add(p); });
-            TypeManager.GetPropertyNames(type).ForEach(p => { if(!Properties.ContainsKey(p)) Properties.Add(p, null); });
+            string label = TypeManager.GetLabel(type);
+            if (!((List<string>)Labels).Contains(label)) ((List<string>)Labels).Add(label);
+
+            return this;
+        }
+        public LabelledEntity RemoveLabels<T>()
+        {
+            RemoveLabels(typeof(T));
+
+            return this;
+        }
+        public LabelledEntity RemoveLabels(Type type)
+        {
+            TypeManager.GetLabels(type).ToList().ForEach(p => ((List<string>)Labels).Remove(p));
 
             return this;
         }
@@ -43,12 +81,39 @@ namespace AsIKnow.Graph
         }
         public LabelledEntity RemoveLabel(Type type)
         {
-            TypeManager.GetLabels(type).ForEach(p => ((List<string>)Labels).Remove(p));
-            TypeManager.GetPropertyNames(type).ForEach(p => Properties.Remove(p));
+            string label = TypeManager.GetLabel(type);
+            ((List<string>)Labels).Remove(label);
 
             return this;
         }
-        public LabelledEntity RemoveProperty<T>(Expression<Func<T, object>> expr)
+
+        public LabelledEntity AddProperties<T>()
+        {
+            AddProperties(typeof(T));
+
+            return this;
+        }
+        public LabelledEntity AddProperties(Type type)
+        {
+            TypeManager.GetPropertyNames(type).ToList().ForEach(p => { if (!Properties.ContainsKey(p)) Properties.Add(p, null); });
+
+            return this;
+        }
+
+        public LabelledEntity RemoveProperties<T>()
+        {
+            RemoveProperties(typeof(T));
+
+            return this;
+        }
+        public LabelledEntity RemoveProperties(Type type)
+        {
+            TypeManager.GetPropertyNames(type).ToList().ForEach(p => Properties.Remove(p));
+
+            return this;
+        }
+
+        public LabelledEntity RemoveProps<T>(Expression<Func<T, object>> expr)
         {
             if (expr == null)
                 throw new ArgumentNullException(nameof(expr));
@@ -69,7 +134,7 @@ namespace AsIKnow.Graph
 
             return this;
         }
-        public LabelledEntity SetProperty<T>(Expression<Func<T, object>> expr, object value)
+        public LabelledEntity SetProps<T>(Expression<Func<T, object>> expr, object value)
         {
             if (expr == null)
                 throw new ArgumentNullException(nameof(expr));
@@ -125,6 +190,20 @@ namespace AsIKnow.Graph
                 throw new ArgumentNullException(nameof(value));
 
             Type type = value.GetType();
+            AddLabels(type);
+            foreach (PropertyInfo pinfo in type.GetProperties().Where(p => p.CanRead && p.CanWrite))
+            {
+                Properties[pinfo.Name] = pinfo.GetValue(value);
+            }
+
+            return this;
+        }
+        public LabelledEntity SetFromObjectOnly(object value)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            Type type = value.GetType();
             AddLabel(type);
             foreach (PropertyInfo pinfo in type.GetProperties().Where(p => p.CanRead && p.CanWrite))
             {
@@ -134,20 +213,11 @@ namespace AsIKnow.Graph
             return this;
         }
 
-        public T GetObject<T>()
+        public T FillObject<T>(T obj = null) where T: class, new()
         {
-            List<Type> types = TypeManager.GetTypesFromLabels(Labels);
+            obj = obj ?? new T();
 
-            object obj = TypeManager.GetInstanceOfMostSpecific(types);
-
-            if (!typeof(T).IsAssignableFrom(obj.GetType()))
-                throw new InvalidCastException($"Unable to cast object of type {obj.GetType().FullName}  to {typeof(T).FullName}");
-
-            return (T)TypeManager.AsType(obj, Properties);
-        }
-        public T FillObject<T>(T obj)
-        {
-            List<Type> types = TypeManager.GetTypesFromLabels(Labels);
+            List<Type> types = TypeManager.GetTypesFromLabels(Labels).ToList();
 
             object tmp = TypeManager.GetInstanceOfMostSpecific(types);
 
@@ -155,6 +225,16 @@ namespace AsIKnow.Graph
                 throw new InvalidCastException($"Unable to cast object of type {tmp.GetType().FullName}  to {typeof(T).FullName}");
 
             return TypeManager.AsType<T>(obj, Properties);
+        }
+
+        public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
+        {
+            return Properties.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

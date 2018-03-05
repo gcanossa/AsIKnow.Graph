@@ -16,24 +16,24 @@ namespace AsIKnow.Graph
         {
             if (type == null)
                 throw new ArgumentNullException(nameof(type));
-
-            string name = type.Name;
-
-            return Options.UseFullNameInLables ? $"{type.Namespace}.{name}" : name;
+            
+            return Options.UseFullNameInLables ? type.FullName : type.Name;
         }
-        public override List<Type> GetTypesFromLabels(IEnumerable<string> labels)
+        public override IEnumerable<Type> GetTypesFromLabels(IEnumerable<string> labels)
         {
             if (labels == null)
                 throw new ArgumentNullException(nameof(labels));
 
-            return labels.Select(p => Type.GetType(p)).ToList();
+            IEnumerable<Type> types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(p => p.GetTypes());
+
+            return labels.Select(p => types.FirstOrDefault(x => Options.UseFullNameInLables ? x.FullName == p : x.Name == p));
         }
-        public override List<string> GetLabels(Type type)
+        public override IEnumerable<string> GetLabels(Type type)
         {
             if (type == null)
                 throw new ArgumentNullException(nameof(type));
 
-            List<string> result = new List<string>();
+            HashSet<string> result = new HashSet<string>();
             result.Add(GetLabel(type));
 
             foreach (Type item in type.GetInterfaces())
@@ -44,12 +44,13 @@ namespace AsIKnow.Graph
             while (type != typeof(object))
             {
                 type = type.BaseType;
-                result.Add(GetLabel(type));
+                if(type != typeof(object))
+                    result.Add(GetLabel(type));
             }
 
             return result;
         }
-        public override object AsType(object obj, Dictionary<string, object> properties)
+        public override T AsType<T>(T obj, Dictionary<string, object> properties)
         {
             if (obj == null)
                 throw new ArgumentNullException(nameof(obj));
@@ -80,7 +81,7 @@ namespace AsIKnow.Graph
             return result;
         }
 
-        public override List<string> GetPropertyNames(Type type)
+        public override IEnumerable<string> GetPropertyNames(Type type)
         {
             if (type == null)
                 throw new ArgumentNullException(nameof(type));
@@ -106,7 +107,12 @@ namespace AsIKnow.Graph
             foreach (PropertyInfo pinfo in included.GetType().GetProperties().Where(p=>p.CanRead))
             {
                 PropertyInfo tmp = type.GetProperty(pinfo.Name);
-                if (tmp == null || !tmp.GetValue(included).Equals(tmp.GetValue(obj)))
+                if (
+                    tmp == null || 
+                    pinfo.PropertyType != tmp.PropertyType  || 
+                    (pinfo.GetValue(included) == null && tmp.GetValue(obj) != null) ||
+                    (pinfo.GetValue(included) != null && tmp.GetValue(obj) == null) ||
+                    (pinfo.GetValue(included) != null && tmp.GetValue(obj) != null && !pinfo.GetValue(included).Equals(tmp.GetValue(obj))))
                     return false;
             }
             return true;

@@ -24,25 +24,25 @@ namespace AsIKnow.Graph
         }
         public abstract string GetLabel(Type type);
 
-        public List<string> GetLabels(object obj)
+        public IEnumerable<string> GetLabels(object obj)
         {
             return GetLabels(obj?.GetType());
         }
-        public List<string> GetLabels<T>()
+        public IEnumerable<string> GetLabels<T>()
         {
             return GetLabels(typeof(T));
         }
-        public abstract List<Type> GetTypesFromLabels(IEnumerable<string> labels);
-        public abstract List<string> GetLabels(Type type);
-        public List<string> GetPropertyNames(object obj)
+        public abstract IEnumerable<Type> GetTypesFromLabels(IEnumerable<string> labels);
+        public abstract IEnumerable<string> GetLabels(Type type);
+        public IEnumerable<string> GetPropertyNames(object obj)
         {
             return GetPropertyNames(obj?.GetType());
         }
-        public List<string> GetPropertyNames<T>()
+        public IEnumerable<string> GetPropertyNames<T>()
         {
             return GetPropertyNames(typeof(T));
         }
-        public abstract List<string> GetPropertyNames(Type type);
+        public abstract IEnumerable<string> GetPropertyNames(Type type);
 
         public abstract object GetInstanceOfMostSpecific(IEnumerable<Type> types);
 
@@ -50,11 +50,7 @@ namespace AsIKnow.Graph
         {
             return AsType(new T(), properties);
         }
-        public T AsType<T>(T obj, Dictionary<string, object> properties)
-        {
-            return AsType(obj, properties);
-        }
-        public abstract object AsType(object obj, Dictionary<string, object> properties);
+        public abstract T AsType<T>(T obj, Dictionary<string, object> properties);
         public abstract Dictionary<string, object> FromType(object obj);
 
         public abstract bool CheckObjectInclusion(object obj, object included);
