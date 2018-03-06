@@ -59,9 +59,10 @@ namespace AsIKnow.Graph
 
             foreach (PropertyInfo pinfo in obj.GetType().GetProperties().Where(p => p.CanWrite && properties.Keys.Contains(p.Name)))
             {
-                if (!pinfo.PropertyType.IsAssignableFrom(properties[pinfo.Name].GetType()))
-                    throw new ArgumentException($"Type mismatch for property {pinfo.Name}.", nameof(properties));
-                pinfo.SetValue(obj, properties[pinfo.Name]);
+                if(!pinfo.PropertyType.IsValueType)
+                    pinfo.SetValue(obj, properties[pinfo.Name]);
+                else
+                    pinfo.SetValue(obj, Convert.ChangeType(properties[pinfo.Name], pinfo.PropertyType));
             }
 
             return obj;

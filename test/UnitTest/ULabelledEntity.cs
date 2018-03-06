@@ -16,7 +16,7 @@ namespace UnitTest
 
         #region nested type
 
-        public class Entity : LabelledEntity
+        public class Entity : GraphLabelledEntity
         {
             public Entity(TypeManager typeManager) : base(typeManager)
             {
@@ -58,7 +58,7 @@ namespace UnitTest
             var ent2 = new Entity(mgr).AddLabels<ClassB>().AddProperties<ClassB>();
 
             Assert.Equal(new string[] { "PropN", "PropFirst" }, ent2.PropertiesKeys);
-            Assert.Equal(new string[] { "ClassB", "IFirst", "ClassA" }, ent2.Labels);
+            Assert.Equal(new string[] { "ClassB", "IFirst", "ClassA" }, ent2.As<GraphLabelledEntity>().Labels);
         }
 
         [Trait("Category", nameof(ULabelledEntity))]
@@ -70,22 +70,22 @@ namespace UnitTest
             var ent = new Entity(mgr).AddLabels<ClassB>().AddProperties<ClassB>();
 
             Assert.Equal(new string[] { "PropN", "PropFirst" }, ent.PropertiesKeys);
-            Assert.Equal(new string[] { "ClassB", "IFirst", "ClassA" }, ent.Labels);
+            Assert.Equal(new string[] { "ClassB", "IFirst", "ClassA" }, ent.As<GraphLabelledEntity>().Labels);
 
-            ent.AddLabels<ClassB>();
-
-            Assert.Equal(new string[] { "PropN", "PropFirst" }, ent.PropertiesKeys);
-            Assert.Equal(new string[] { "ClassB", "IFirst", "ClassA" }, ent.Labels);
-
-            ent.RemoveLabels<ClassA>();
+            ent.As<GraphLabelledEntity>().AddLabels<ClassB>();
 
             Assert.Equal(new string[] { "PropN", "PropFirst" }, ent.PropertiesKeys);
-            Assert.Equal(new string[] { "ClassB" }, ent.Labels);
+            Assert.Equal(new string[] { "ClassB", "IFirst", "ClassA" }, ent.As<GraphLabelledEntity>().Labels);
+
+            ent.As<GraphLabelledEntity>().RemoveLabels<ClassA>();
+
+            Assert.Equal(new string[] { "PropN", "PropFirst" }, ent.PropertiesKeys);
+            Assert.Equal(new string[] { "ClassB" }, ent.As<GraphLabelledEntity>().Labels);
 
             ent.RemoveProperties<ClassB>();
 
             Assert.Equal(new string[] { }, ent.PropertiesKeys);
-            Assert.Equal(new string[] { "ClassB" }, ent.Labels);
+            Assert.Equal(new string[] { "ClassB" }, ent.As<GraphLabelledEntity>().Labels);
         }
 
 

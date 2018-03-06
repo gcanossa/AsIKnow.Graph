@@ -4,7 +4,7 @@ using System.Text;
 
 namespace AsIKnow.Graph
 {
-    public class Relationship : LabelledEntity
+    public class Relationship : GraphLabelledEntity
     {
         public Relationship(TypeManager typeManager) : base(typeManager)
         {

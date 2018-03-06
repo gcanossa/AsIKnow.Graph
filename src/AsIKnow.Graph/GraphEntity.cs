@@ -8,20 +8,22 @@ using System.Text;
 
 namespace AsIKnow.Graph
 {
-    public abstract class LabelledEntity : IEnumerable<KeyValuePair<string, object>>
+    public abstract class GraphEntity : IEnumerable<KeyValuePair<string, object>>
     {
         protected TypeManager TypeManager { get; set; }
-        public LabelledEntity(TypeManager typeManager)
+        public GraphEntity(TypeManager typeManager)
         {
             TypeManager = typeManager;
         }
-        public LabelledEntity(TypeManager typeManager, object obj) : this(typeManager)
+        public GraphEntity(TypeManager typeManager, object obj) : this(typeManager)
         {
             SetFromObject(obj);
         }
-        public IEnumerable<string> Labels { get; } = new List<string>();
+
         public IEnumerable<string> PropertiesKeys { get { return Properties.Keys; } }
         protected Dictionary<string, object> Properties { get; } = new Dictionary<string, object>();
+
+        public string EntityType { get; protected set; }
 
         public object this[string key]
         {
@@ -35,85 +37,46 @@ namespace AsIKnow.Graph
             }
         }
 
-        public LabelledEntity AddLabels<T>()
+        public GraphEntity OfType<T>()
         {
-            AddLabels(typeof(T));
+            OfType(typeof(T));
 
             return this;
         }
-        public LabelledEntity AddLabels(Type type)
+        public virtual GraphEntity OfType(Type type)
         {
-            TypeManager.GetLabels(type).ToList().ForEach(p => { if (!((List<string>)Labels).Contains(p)) ((List<string>)Labels).Add(p); });
-
-            return this;
-        }
-
-        public LabelledEntity AddLabel<T>()
-        {
-            AddLabel(typeof(T));
-
-            return this;
-        }
-        public LabelledEntity AddLabel(Type type)
-        {
-            string label = TypeManager.GetLabel(type);
-            if (!((List<string>)Labels).Contains(label)) ((List<string>)Labels).Add(label);
-
-            return this;
-        }
-        public LabelledEntity RemoveLabels<T>()
-        {
-            RemoveLabels(typeof(T));
-
-            return this;
-        }
-        public LabelledEntity RemoveLabels(Type type)
-        {
-            TypeManager.GetLabels(type).ToList().ForEach(p => ((List<string>)Labels).Remove(p));
-
-            return this;
-        }
-        public LabelledEntity RemoveLabel<T>()
-        {
-            RemoveLabel(typeof(T));
-
-            return this;
-        }
-        public LabelledEntity RemoveLabel(Type type)
-        {
-            string label = TypeManager.GetLabel(type);
-            ((List<string>)Labels).Remove(label);
+            EntityType = TypeManager.GetLabel(type);
 
             return this;
         }
 
-        public LabelledEntity AddProperties<T>()
+        public virtual GraphEntity AddProperties<T>()
         {
             AddProperties(typeof(T));
 
             return this;
         }
-        public LabelledEntity AddProperties(Type type)
+        public virtual GraphEntity AddProperties(Type type)
         {
             TypeManager.GetPropertyNames(type).ToList().ForEach(p => { if (!Properties.ContainsKey(p)) Properties.Add(p, null); });
 
             return this;
         }
 
-        public LabelledEntity RemoveProperties<T>()
+        public virtual GraphEntity RemoveProperties<T>()
         {
             RemoveProperties(typeof(T));
 
             return this;
         }
-        public LabelledEntity RemoveProperties(Type type)
+        public virtual GraphEntity RemoveProperties(Type type)
         {
             TypeManager.GetPropertyNames(type).ToList().ForEach(p => Properties.Remove(p));
 
             return this;
         }
 
-        public LabelledEntity RemoveProps<T>(Expression<Func<T, object>> expr)
+        public virtual GraphEntity RemoveProps<T>(Expression<Func<T, object>> expr)
         {
             if (expr == null)
                 throw new ArgumentNullException(nameof(expr));
@@ -134,7 +97,7 @@ namespace AsIKnow.Graph
 
             return this;
         }
-        public LabelledEntity SetProps<T>(Expression<Func<T, object>> expr, object value)
+        public virtual GraphEntity SetProps<T>(Expression<Func<T, object>> expr, object value)
         {
             if (expr == null)
                 throw new ArgumentNullException(nameof(expr));
@@ -157,8 +120,6 @@ namespace AsIKnow.Graph
                         object tmp = pinfo.GetValue(value);
                         if (tmp == null)
                             Properties.Remove(pinfo.Name);
-                        if (!tmp.GetType().IsAssignableFrom(pinfo.PropertyType))
-                            throw new ArgumentException($"Type mismatch for property {pinfo.Name}.", nameof(expr));
 
                         if (!Properties.ContainsKey(pinfo.Name))
                             Properties.Add(pinfo.Name, tmp);
@@ -173,8 +134,6 @@ namespace AsIKnow.Graph
 
                 if (value == null)
                     Properties.Remove(info.Name);
-                if (!value.GetType().IsAssignableFrom(((PropertyInfo)info).PropertyType))
-                    throw new ArgumentException($"Type mismatch for property {info.Name}.", nameof(expr));
 
                 if (!Properties.ContainsKey(info.Name))
                     Properties.Add(info.Name, value);
@@ -184,13 +143,28 @@ namespace AsIKnow.Graph
 
             return this;
         }
-        public LabelledEntity SetFromObject(object value)
+        public virtual GraphEntity SetProps(IEnumerable<KeyValuePair<string, object>> values)
+        {
+            if (values == null)
+                throw new ArgumentNullException(nameof(values));
+
+            foreach (KeyValuePair<string, object> kv in values)
+            {
+                if (!Properties.ContainsKey(kv.Key))
+                    Properties.Add(kv.Key, kv.Value);
+                else
+                    Properties[kv.Key] = kv.Value;
+            }
+
+            return this;
+        }
+        public virtual GraphEntity SetFromObject(object value)
         {
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
 
             Type type = value.GetType();
-            AddLabels(type);
+            OfType(type);
             foreach (PropertyInfo pinfo in type.GetProperties().Where(p => p.CanRead && p.CanWrite))
             {
                 Properties[pinfo.Name] = pinfo.GetValue(value);
@@ -198,26 +172,12 @@ namespace AsIKnow.Graph
 
             return this;
         }
-        public LabelledEntity SetFromObjectOnly(object value)
-        {
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
 
-            Type type = value.GetType();
-            AddLabel(type);
-            foreach (PropertyInfo pinfo in type.GetProperties().Where(p => p.CanRead && p.CanWrite))
-            {
-                Properties[pinfo.Name] = pinfo.GetValue(value);
-            }
-
-            return this;
-        }
-
-        public T FillObject<T>(T obj = null) where T: class, new()
+        public virtual T FillObject<T>(T obj = null) where T : class, new()
         {
             obj = obj ?? new T();
 
-            List<Type> types = TypeManager.GetTypesFromLabels(Labels).ToList();
+            List<Type> types = TypeManager.GetTypesFromLabels(new[] { EntityType }).ToList();
 
             object tmp = TypeManager.GetInstanceOfMostSpecific(types);
 
@@ -225,6 +185,11 @@ namespace AsIKnow.Graph
                 throw new InvalidCastException($"Unable to cast object of type {tmp.GetType().FullName}  to {typeof(T).FullName}");
 
             return TypeManager.AsType<T>(obj, Properties);
+        }
+
+        public D As<D>() where D : GraphEntity
+        {
+            return this as D;
         }
 
         public IEnumerator<KeyValuePair<string, object>> GetEnumerator()

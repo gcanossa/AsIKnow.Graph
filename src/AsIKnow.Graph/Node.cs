@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace AsIKnow.Graph
 {
-    public class Node : LabelledEntity
+    public class Node : GraphLabelledEntity
     {
         public Node(TypeManager typeManager) : base(typeManager)
         {
