@@ -41,7 +41,7 @@ namespace AsIKnow.Graph
                 result.Add(GetLabel(item));
             }
 
-            while (type != typeof(object))
+            while (type != typeof(object) && !type.IsInterface)
             {
                 type = type.BaseType;
                 if(type != typeof(object))
